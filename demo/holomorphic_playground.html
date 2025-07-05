@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Holomorphic Signal Processing - Interactive Playground</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e, #16213e);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .playground-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .visualization-area {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .chart-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            position: relative;
+        }
+
+        .chart-panel h3 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .control-section h4 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 1em;
+            border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .parameter-group {
+            display: grid;
+            grid-template-columns: 1fr 80px;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .parameter-group label {
+            font-size: 0.9em;
+            color: #ffffff;
+        }
+
+        .parameter-group input,
+        .parameter-group select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+
+        .parameter-group input:focus,
+        .parameter-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            box-shadow: 0 2px 10px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            box-shadow: 0 2px 10px rgba(244, 67, 54, 0.3);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-disconnected {
+            background: #f44336;
+        }
+
+        .status-processing {
+            background: #FF9800;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .metrics-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .preset-btn {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid #2196F3;
+            color: #2196F3;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(33, 150, 243, 0.3);
+            transform: scale(1.05);
+        }
+
+        .experiment-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-left: 3px solid #4CAF50;
+            padding-left: 8px;
+        }
+
+        .log-error {
+            border-left-color: #f44336;
+            color: #f44336;
+        }
+
+        .log-warning {
+            border-left-color: #FF9800;
+            color: #FF9800;
+        }
+
+        .parameter-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .slider-container {
+            display: grid;
+            grid-template-columns: 1fr 60px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-input {
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .range-input::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        @media (max-width: 1200px) {
+            .playground-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .control-panel {
+                max-height: 300px;
+            }
+            
+            .visualization-area {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 400px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="playground-container">
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h2 style="text-align: center; color: #4CAF50; margin-bottom: 20px;">
+                🧪 Experiment Controls
+            </h2>
+
+            <!-- Connection Status -->
+            <div class="control-section">
+                <h4>🔗 Connection</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <span class="status-indicator status-disconnected" id="connection-status"></span>
+                    <span id="connection-text">Disconnected</span>
+                </div>
+                <button class="btn" onclick="toggleConnection()" id="connection-btn">Connect to API</button>
+            </div>
+
+            <!-- Signal Generation -->
+            <div class="control-section">
+                <h4>🌊 Signal Generation</h4>
+                
+                <div class="parameter-group">
+                    <label>Signal Type:</label>
+                    <select id="signal-type">
+                        <option value="sine">Sine Wave</option>
+                        <option value="square">Square Wave</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="chirp">Chirp</option>
+                        <option value="noise">White Noise</option>
+                        <option value="complex">Complex Mix</option>
+                    </select>
+                </div>
+
+                <div class="slider-container">
+                    <label>Frequency (Hz):</label>
+                    <input type="range" class="range-input" id="frequency" min="0.1" max="100" step="0.1" value="10">
+                    <input type="number" id="frequency-val" value="10" min="0.1" max="100" step="0.1">
+                </div>
+
+                <div class="slider-container">
+                    <label>Amplitude:</label>
+                    <input type="range" class="range-input" id="amplitude" min="0.1" max="5" step="0.1" value="1">
+                    <input type="number" id="amplitude-val" value="1" min="0.1" max="5" step="0.1">
+                </div>
+
+                <div class="slider-container">
+                    <label>Samples:</label>
+                    <input type="range" class="range-input" id="samples" min="100" max="10000" step="100" value="1000">
+                    <input type="number" id="samples-val" value="1000" min="100" max="10000" step="100">
+                </div>
+
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="loadPreset('audio')">Audio Signal</button>
+                    <button class="preset-btn" onclick="loadPreset('bio')">Bio Signal</button>
+                    <button class="preset-btn" onclick="loadPreset('radar')">Radar Pulse</button>
+                    <button class="preset-btn" onclick="loadPreset('seismic')">Seismic Wave</button>
+                </div>
+
+                <button class="btn btn-secondary" onclick="generateSignal()">Generate Signal</button>
+            </div>
+
+            <!-- Processing Parameters -->
+            <div class="control-section">
+                <h4>🧠 Processing Parameters</h4>
+                
+                <div class="slider-container">
+                    <label>Sampling Rate:</label>
+                    <input type="range" class="range-input" id="sampling-rate" min="1000" max="100000" step="1000" value="48000">
+                    <input type="number" id="sampling-rate-val" value="48000" min="1000" max="100000" step="1000">
+                </div>
+
+                <div class="slider-container">
+                    <label>Harmonics:</label>
+                    <input type="range" class="range-input" id="harmonics" min="1" max="20" step="1" value="5">
+                    <input type="number" id="harmonics-val" value="5" min="1" max="20" step="1">
+                </div>
+
+                <div class="slider-container">
+                    <label>Noise Level:</label>
+                    <input type="range" class="range-input" id="noise-level" min="0" max="1" step="0.01" value="0.1">
+                    <input type="number" id="noise-level-val" value="0.1" min="0" max="1" step="0.01">
+                </div>
+
+                <div class="parameter-group">
+                    <label>Processing Mode:</label>
+                    <select id="processing-mode">
+                        <option value="standard">Standard</option>
+                        <option value="enhanced">Enhanced</option>
+                        <option value="realtime">Real-time</option>
+                        <option value="batch">Batch</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="processSignal()">🧠 Process Signal</button>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="control-section">
+                <h4>📊 Performance Metrics</h4>
+                <div class="metrics-display">
+                    <div class="metric-card">
+                        <div class="metric-value" id="throughput-metric">0.00</div>
+                        <div class="metric-label">M samples/sec</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="latency-metric">0</div>
+                        <div class="metric-label">ms latency</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="performance-metric">0</div>
+                        <div class="metric-label">% of target</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="efficiency-metric">0</div>
+                        <div class="metric-label">% efficiency</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="runBenchmark()">🏁 Run Benchmark</button>
+            </div>
+
+            <!-- Real-time Streaming -->
+            <div class="control-section">
+                <h4>🌊 Real-time Stream</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <span class="status-indicator status-disconnected" id="stream-status"></span>
+                    <span id="stream-text">Stream Inactive</span>
+                </div>
+                <button class="btn" onclick="toggleStream()" id="stream-btn">Start Stream</button>
+                <div class="slider-container" style="margin-top: 10px;">
+                    <label>Stream Rate (Hz):</label>
+                    <input type="range" class="range-input" id="stream-rate" min="1" max="60" step="1" value="10">
+                    <input type="number" id="stream-rate-val" value="10" min="1" max="60" step="1">
+                </div>
+            </div>
+
+            <!-- Experiment Log -->
+            <div class="control-section">
+                <h4>📝 Experiment Log</h4>
+                <button class="btn btn-danger" onclick="clearLog()" style="font-size: 0.8em; padding: 5px 10px;">Clear Log</button>
+                <div class="experiment-log" id="experiment-log">
+                    <div class="log-entry">Ready for experiments...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="visualization-area">
+            <!-- Original Signal -->
+            <div class="chart-panel">
+                <h3>🌊 Original Signal</h3>
+                <canvas id="originalChart"></canvas>
+            </div>
+
+            <!-- Processed Signal -->
+            <div class="chart-panel">
+                <h3>🧠 Processed Signal</h3>
+                <canvas id="processedChart"></canvas>
+            </div>
+
+            <!-- Frequency Domain -->
+            <div class="chart-panel">
+                <h3>📊 Frequency Spectrum</h3>
+                <canvas id="spectrumChart"></canvas>
+            </div>
+
+            <!-- Real-time Monitor -->
+            <div class="chart-panel">
+                <h3>⚡ Real-time Monitor</h3>
+                <canvas id="realtimeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let apiConnected = false;
+        let streamActive = false;
+        let ws = null;
+        let charts = {};
+        let currentSignal = [];
+        let processedSignal = [];
+        let streamData = [];
+        let maxStreamPoints = 100;
+
+        // Chart configurations
+        const chartConfig = {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Signal',
+                    data: [],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#ffffff' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: '#ffffff' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                },
+                animation: {
+                    duration: 0
+                }
+            }
+        };
+
+        // Initialize charts
+        function initializeCharts() {
+            const chartIds = ['originalChart', 'processedChart', 'spectrumChart', 'realtimeChart'];
+            
+            chartIds.forEach(id => {
+                const ctx = document.getElementById(id).getContext('2d');
+                const config = JSON.parse(JSON.stringify(chartConfig));
+                
+                if (id === 'spectrumChart') {
+                    config.data.datasets[0].borderColor = '#2196F3';
+                    config.data.datasets[0].backgroundColor = 'rgba(33, 150, 243, 0.1)';
+                } else if (id === 'realtimeChart') {
+                    config.data.datasets[0].borderColor = '#FF9800';
+                    config.data.datasets[0].backgroundColor = 'rgba(255, 152, 0, 0.1)';
+                    config.options.animation.duration = 200;
+                }
+                
+                charts[id] = new Chart(ctx, config);
+            });
+            
+            log('Charts initialized successfully', 'info');
+        }
+
+        // Logging function
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('experiment-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type === 'error' ? 'log-error' : type === 'warning' ? 'log-warning' : ''}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Keep only last 50 entries
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+
+        // Clear log
+        function clearLog() {
+            document.getElementById('experiment-log').innerHTML = '<div class="log-entry">Log cleared...</div>';
+        }
+
+        // Connect sliders to number inputs
+        function initializeSliders() {
+            const sliders = ['frequency', 'amplitude', 'samples', 'sampling-rate', 'harmonics', 'noise-level', 'stream-rate'];
+            
+            sliders.forEach(id => {
+                const slider = document.getElementById(id);
+                const input = document.getElementById(id + '-val');
+                
+                slider.addEventListener('input', () => {
+                    input.value = slider.value;
+                });
+                
+                input.addEventListener('input', () => {
+                    slider.value = input.value;
+                });
+            });
+        }
+
+        // Signal generation functions
+        function generateWave(type, samples, frequency, amplitude, samplingRate) {
+            const signal = [];
+            const dt = 1 / samplingRate;
+            
+            for (let i = 0; i < samples; i++) {
+                const t = i * dt;
+                let value = 0;
+                
+                switch (type) {
+                    case 'sine':
+                        value = amplitude * Math.sin(2 * Math.PI * frequency * t);
+                        break;
+                    case 'square':
+                        value = amplitude * Math.sign(Math.sin(2 * Math.PI * frequency * t));
+                        break;
+                    case 'sawtooth':
+                        value = amplitude * (2 * (t * frequency - Math.floor(t * frequency + 0.5)));
+                        break;
+                    case 'triangle':
+                        const period = 1 / frequency;
+                        const phase = (t % period) / period;
+                        value = amplitude * (phase < 0.5 ? 4 * phase - 1 : 3 - 4 * phase);
+                        break;
+                    case 'chirp':
+                        const f = frequency * (1 + t);
+                        value = amplitude * Math.sin(2 * Math.PI * f * t);
+                        break;
+                    case 'noise':
+                        value = amplitude * (Math.random() - 0.5) * 2;
+                        break;
+                    case 'complex':
+                        value = amplitude * (
+                            0.5 * Math.sin(2 * Math.PI * frequency * t) +
+                            0.3 * Math.sin(2 * Math.PI * frequency * 3 * t) +
+                            0.2 * Math.sin(2 * Math.PI * frequency * 5 * t) +
+                            0.1 * (Math.random() - 0.5)
+                        );
+                        break;
+                }
+                
+                signal.push(value);
+            }
+            
+            return signal;
+        }
+
+        // Generate signal
+        function generateSignal() {
+            const type = document.getElementById('signal-type').value;
+            const frequency = parseFloat(document.getElementById('frequency').value);
+            const amplitude = parseFloat(document.getElementById('amplitude').value);
+            const samples = parseInt(document.getElementById('samples').value);
+            const samplingRate = parseInt(document.getElementById('sampling-rate').value);
+            
+            currentSignal = generateWave(type, samples, frequency, amplitude, samplingRate);
+            
+            // Update chart
+            const labels = Array.from({length: Math.min(samples, 500)}, (_, i) => (i / samplingRate * 1000).toFixed(1));
+            charts.originalChart.data.labels = labels;
+            charts.originalChart.data.datasets[0].data = currentSignal.slice(0, 500);
+            charts.originalChart.update();
+            
+            log(`Generated ${type} signal: ${samples} samples, ${frequency}Hz, ${amplitude} amplitude`);
+        }
+
+        // Load presets
+        function loadPreset(type) {
+            const presets = {
+                audio: { frequency: 440, amplitude: 1, samples: 2000, samplingRate: 44100, signalType: 'sine' },
+                bio: { frequency: 1.2, amplitude: 0.8, samples: 5000, samplingRate: 1000, signalType: 'complex' },
+                radar: { frequency: 10, amplitude: 2, samples: 1000, samplingRate: 10000, signalType: 'chirp' },
+                seismic: { frequency: 0.5, amplitude: 1.5, samples: 8000, samplingRate: 100, signalType: 'complex' }
+            };
+            
+            const preset = presets[type];
+            if (preset) {
+                document.getElementById('frequency').value = preset.frequency;
+                document.getElementById('frequency-val').value = preset.frequency;
+                document.getElementById('amplitude').value = preset.amplitude;
+                document.getElementById('amplitude-val').value = preset.amplitude;
+                document.getElementById('samples').value = preset.samples;
+                document.getElementById('samples-val').value = preset.samples;
+                document.getElementById('sampling-rate').value = preset.samplingRate;
+                document.getElementById('sampling-rate-val').value = preset.samplingRate;
+                document.getElementById('signal-type').value = preset.signalType;
+                
+                log(`Loaded ${type} preset`);
+                generateSignal();
+            }
+        }
+
+        // API connection
+        async function toggleConnection() {
+            const btn = document.getElementById('connection-btn');
+            const status = document.getElementById('connection-status');
+            const text = document.getElementById('connection-text');
+            
+            if (apiConnected) {
+                apiConnected = false;
+                btn.textContent = 'Connect to API';
+                status.className = 'status-indicator status-disconnected';
+                text.textContent = 'Disconnected';
+                log('Disconnected from API');
+            } else {
+                try {
+                    btn.textContent = 'Connecting...';
+                    status.className = 'status-indicator status-processing';
+                    text.textContent = 'Connecting...';
+                    
+                    // Test API connection
+                    const response = await fetch('/health');
+                    if (response.ok) {
+                        apiConnected = true;
+                        btn.textContent = 'Disconnect';
+                        status.className = 'status-indicator status-connected';
+                        text.textContent = 'Connected';
+                        log('Connected to API successfully');
+                    } else {
+                        throw new Error('API not responding');
+                    }
+                } catch (error) {
+                    btn.textContent = 'Connect to API';
+                    status.className = 'status-indicator status-disconnected';
+                    text.textContent = 'Connection Failed';
+                    log(`Connection failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Process signal
+        async function processSignal() {
+            if (!apiConnected) {
+                log('Please connect to API first', 'warning');
+                return;
+            }
+            
+            if (currentSignal.length === 0) {
+                log('Please generate a signal first', 'warning');
+                return;
+            }
+            
+            try {
+                log('Processing signal...');
+                
+                const samplingRate = parseInt(document.getElementById('sampling-rate').value);
+                
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        samples: currentSignal,
+                        sampling_rate: samplingRate,
+                        processing_mode: document.getElementById('processing-mode').value
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                processedSignal = data.processed_signal;
+                const metrics = data.performance_metrics;
+                
+                // Update processed signal chart
+                const labels = Array.from({length: Math.min(processedSignal.length, 500)}, (_, i) => (i / samplingRate * 1000).toFixed(1));
+                charts.processedChart.data.labels = labels;
+                charts.processedChart.data.datasets[0].data = processedSignal.slice(0, 500);
+                charts.processedChart.update();
+                
+                // Update frequency spectrum
+                updateFrequencySpectrum(processedSignal, samplingRate);
+                
+                // Update metrics
+                updateMetrics(metrics);
+                
+                log(`Signal processed: ${metrics.samples_processed} samples in ${metrics.processing_time_ms.toFixed(2)}ms`);
+                
+            } catch (error) {
+                log(`Processing failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Update frequency spectrum
+        function updateFrequencySpectrum(signal, samplingRate) {
+            // Simple FFT approximation for visualization
+            const fftSize = Math.min(512, signal.length);
+            const spectrum = [];
+            const frequencies = [];
+            
+            for (let k = 0; k < fftSize / 2; k++) {
+                let real = 0, imag = 0;
+                for (let n = 0; n < fftSize; n++) {
+                    const angle = -2 * Math.PI * k * n / fftSize;
+                    real += signal[n] * Math.cos(angle);
+                    imag += signal[n] * Math.sin(angle);
+                }
+                spectrum.push(Math.sqrt(real * real + imag * imag));
+                frequencies.push((k * samplingRate / fftSize).toFixed(1));
+            }
+            
+            charts.spectrumChart.data.labels = frequencies;
+            charts.spectrumChart.data.datasets[0].data = spectrum;
+            charts.spectrumChart.update();
+        }
+
+        // Update metrics display
+        function updateMetrics(metrics) {
+            document.getElementById('throughput-metric').textContent = (metrics.samples_per_second / 1e6).toFixed(2);
+            document.getElementById('latency-metric').textContent = metrics.processing_time_ms.toFixed(1);
+            document.getElementById('performance-metric').textContent = (metrics.performance_ratio * 100).toFixed(1);
+            document.getElementById('efficiency-metric').textContent = Math.min(100, (metrics.samples_per_second / 6480000 * 100)).toFixed(1);
+        }
+
+        // Run benchmark
+        async function runBenchmark() {
+            if (!apiConnected) {
+                log('Please connect to API first', 'warning');
+                return;
+            }
+            
+            try {
+                log('Running performance benchmark...');
+                
+                const response = await fetch('/benchmark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duration: 5.0, batch_size: 4096 })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const results = data.benchmark_results;
+                
+                log(`Benchmark complete: ${(results.average_throughput/1e6).toFixed(2)}M samples/sec (${results.performance_achieved.toFixed(1)}%)`);
+                
+                // Update metrics display
+                updateMetrics({
+                    samples_per_second: results.average_throughput,
+                    processing_time_ms: (results.total_time_seconds * 1000 / results.batch_count),
+                    performance_ratio: results.performance_achieved / 100
+                });
+                
+            } catch (error) {
+                log(`Benchmark failed: ${error.message}`, 'error');
+            }
+        }
+
+        // WebSocket streaming
+        function toggleStream() {
+            const btn = document.getElementById('stream-btn');
+            const status = document.getElementById('stream-status');
+            const text = document.getElementById('stream-text');
+            
+            if (streamActive && ws) {
+                ws.close();
+                return;
+            }
+            
+            if (!apiConnected) {
+                log('Please connect to API first', 'warning');
+                return;
+            }
+            
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/stream`;
+                
+                ws = new WebSocket(wsUrl);
+                
+                btn.textContent = 'Connecting Stream...';
+                status.className = 'status-indicator status-processing';
+                text.textContent = 'Connecting...';
+                
+                ws.onopen = () => {
+                    streamActive = true;
+                    btn.textContent = 'Stop Stream';
+                    status.className = 'status-indicator status-connected';
+                    text.textContent = 'Stream Active';
+                    log('Real-time stream started');
+                    
+                    startStreamingData();
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        if (message.type === 'processed_signal') {
+                            handleStreamData(message.data);
+                        }
+                    } catch (error) {
+                        log(`Stream data error: ${error.message}`, 'error');
+                    }
+                };
+                
+                ws.onclose = () => {
+                    streamActive = false;
+                    btn.textContent = 'Start Stream';
+                    status.className = 'status-indicator status-disconnected';
+                    text.textContent = 'Stream Inactive';
+                    log('Real-time stream stopped');
+                    ws = null;
+                };
+                
+                ws.onerror = (error) => {
+                    log(`Stream error: ${error.message}`, 'error');
+                };
+                
+            } catch (error) {
+                log(`Stream connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Start streaming data
+        function startStreamingData() {
+            if (!streamActive || !ws) return;
+            
+            const streamRate = parseInt(document.getElementById('stream-rate').value);
+            const interval = 1000 / streamRate;
+            
+            const sendData = () => {
+                if (streamActive && ws && ws.readyState === WebSocket.OPEN) {
+                    const testSignal = generateWave('sine', 100, 
+                        10 + 5 * Math.sin(Date.now() / 1000), 
+                        1, 1000);
+                    
+                    ws.send(JSON.stringify({
+                        type: 'process',
+                        data: {
+                            samples: testSignal,
+                            sampling_rate: 1000
+                        },
+                        timestamp: Date.now() / 1000
+                    }));
+                    
+                    setTimeout(sendData, interval);
+                }
+            };
+            
+            sendData();
+        }
+
+        // Handle streaming data
+        function handleStreamData(data) {
+            const metrics = data.performance_metrics;
+            
+            // Add to stream data buffer
+            streamData.push({
+                timestamp: Date.now(),
+                throughput: metrics.samples_per_second / 1e6,
+                latency: metrics.processing_time_ms
+            });
+            
+            // Keep only recent data
+            if (streamData.length > maxStreamPoints) {
+                streamData.shift();
+            }
+            
+            // Update real-time chart
+            const labels = streamData.map((_, i) => i.toString());
+            const throughputData = streamData.map(d => d.throughput);
+            
+            charts.realtimeChart.data.labels = labels;
+            charts.realtimeChart.data.datasets[0].data = throughputData;
+            charts.realtimeChart.update();
+            
+            // Update metrics
+            updateMetrics(metrics);
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            initializeSliders();
+            
+            // Generate initial signal
+            setTimeout(() => {
+                generateSignal();
+            }, 500);
+            
+            log('Holomorphic Signal Processing Playground initialized');
+            log('Ready for experiments! 🚀');
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            Object.values(charts).forEach(chart => {
+                chart.resize();
+            });
+        });
+    </script>
+</body>
+</html> 

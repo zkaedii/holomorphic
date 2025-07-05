@@ -1,0 +1,134 @@
+# 🐳 Docker Compose for Holomorphic Signal Processing Suite
+version: '3.8'
+
+services:
+  # 🧠 Main Holomorphic API Service
+  holomorphic-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: holomorphic-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - WORKERS=4
+      - ADMIN_PASSWORD=HolomorphicAdmin@2024!
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-here}
+      - PROMETHEUS_ENABLED=true
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./plugins:/app/plugins
+    depends_on:
+      - redis
+      - prometheus
+    networks:
+      - holomorphic-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # 🗄️ Redis Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: holomorphic-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - holomorphic-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 📊 Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: holomorphic-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - holomorphic-network
+
+  # 📈 Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: holomorphic-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=holomorphic
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - holomorphic-network
+    depends_on:
+      - prometheus
+
+  # 🔄 Load Balancer (NGINX)
+  nginx:
+    image: nginx:alpine
+    container_name: holomorphic-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - holomorphic-api
+    networks:
+      - holomorphic-network
+
+# 🗂️ Named volumes for persistent data
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+# 🌐 Network configuration
+networks:
+  holomorphic-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

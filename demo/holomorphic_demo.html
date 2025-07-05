@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Holomorphic Signal Processing - Live Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #4CAF50, #2196F3, #FF9800);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+
+        .stat-card h3 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-unit {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .demo-section {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 30px 0;
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .demo-section h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .results {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #signalChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .websocket-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .ws-connected {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .ws-disconnected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+
+        .ws-connecting {
+            background: rgba(255, 152, 0, 0.2);
+            color: #FF9800;
+            border: 1px solid #FF9800;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .performance-meter {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .meter-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .meter-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid #f44336;
+            color: #f44336;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 1em;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .input-group-200 {
+            width: 200px;
+        }
+
+        .grid-auto-200 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .grid-auto-250 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧠 Holomorphic Signal Processing</h1>
+            <p>Revolutionary CPU-Optimized Real-Time Processing Engine</p>
+            <p><strong>Target Performance: 6.48M samples/second</strong></p>
+        </div>
+
+        <!-- Live Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>🚀 Throughput</h3>
+                <div class="stat-value" id="throughput-value">0.00</div>
+                <div class="stat-unit">M samples/sec</div>
+            </div>
+            <div class="stat-card">
+                <h3>⚡ Latency</h3>
+                <div class="stat-value" id="latency-value">0</div>
+                <div class="stat-unit">milliseconds</div>
+            </div>
+            <div class="stat-card">
+                <h3>📊 Performance</h3>
+                <div class="stat-value" id="performance-value">0</div>
+                <div class="stat-unit">% of target</div>
+            </div>
+            <div class="stat-card">
+                <h3>🔥 Status</h3>
+                <div class="stat-value" id="status-value">READY</div>
+                <div class="stat-unit">system state</div>
+            </div>
+        </div>
+
+        <!-- Performance Benchmark -->
+        <div class="demo-section">
+            <h2>🏁 Performance Benchmark</h2>
+            <div class="controls">
+                <button class="btn" onclick="runBenchmark()">
+                    <span id="benchmark-btn-text">Run 10-Second Benchmark</span>
+                </button>
+                <div class="input-group input-group-200">
+                    <label for="benchmark-duration">Duration (seconds)</label>
+                    <input type="number" id="benchmark-duration" value="10" min="1" max="300" aria-label="Benchmark duration in seconds">
+                </div>
+            </div>
+            <div class="performance-meter">
+                <div>Performance Achievement</div>
+                <div class="meter-bar">
+                    <div class="meter-fill" id="performance-meter" style="width: 0%"></div>
+                </div>
+                <div id="performance-text">Ready to benchmark...</div>
+            </div>
+            <div id="benchmark-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Signal Processing Demo -->
+        <div class="demo-section">
+            <h2>🧠 Signal Processing Demo</h2>
+            <div class="controls">
+                <button class="btn" onclick="processTestSignal()">Process Test Signal</button>
+                <button class="btn btn-secondary" onclick="generateCustomSignal()">Generate Custom Signal</button>
+                <div class="input-group input-group-200">
+                    <label for="signal-type">Signal Type</label>
+                    <select id="signal-type" title="Select signal type">
+                        <option value="sine">Sine Wave</option>
+                        <option value="square">Square Wave</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="noise">White Noise</option>
+                        <option value="chirp">Chirp Signal</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="signalChart"></canvas>
+            </div>
+            <div id="processing-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Real-Time Streaming -->
+        <div class="demo-section">
+            <h2>🌊 Real-Time Streaming</h2>
+            <div class="controls">
+                <button class="btn" onclick="toggleWebSocket()" id="ws-button">Connect WebSocket</button>
+                <span class="websocket-status ws-disconnected" id="ws-status">Disconnected</span>
+            </div>
+            <div id="stream-metrics" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Plugin System Demo -->
+        <div class="demo-section">
+            <h2>🔌 Plugin System</h2>
+            <div class="controls">
+                <button class="btn" onclick="loadPlugins()">Load Available Plugins</button>
+                <button class="btn btn-secondary" onclick="executePlugin()">Execute Plugin</button>
+                <div class="input-group input-group-200">
+                    <label for="plugin-select">Plugin</label>
+                    <select id="plugin-select" title="Select plugin">
+                        <option value="">Select Plugin...</option>
+                    </select>
+                </div>
+            </div>
+            <div id="plugin-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- System Monitoring -->
+        <div class="demo-section">
+            <h2>📊 System Monitoring</h2>
+            <div class="controls">
+                <button class="btn" onclick="getSystemMetrics()">Refresh Metrics</button>
+                <button class="btn btn-secondary" onclick="exportMetrics()">Export Data</button>
+            </div>
+            <div id="system-metrics" class="results" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 🎯 Global variables
+        let ws = null;
+        let isProcessing = false;
+        let performanceData = {
+            throughput: 0,
+            latency: 0,
+            performance: 0,
+            status: 'READY'
+        };
+
+        // 🎨 Chart rendering
+        function drawSignal(canvas, signal, title = 'Processed Signal') {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.offsetWidth;
+            const height = canvas.height = canvas.offsetHeight;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.fillRect(0, 0, width, height);
+            
+            if (!signal || signal.length === 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No signal data', width / 2, height / 2);
+                return;
+            }
+            
+            // Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 10; i++) {
+                const y = (height / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            
+            // Signal
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const scaleX = width / signal.length;
+            const scaleY = height / 4;
+            const offsetY = height / 2;
+            
+            for (let i = 0; i < signal.length; i++) {
+                const x = i * scaleX;
+                const y = offsetY - signal[i] * scaleY;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Title
+            ctx.fillStyle = '#4CAF50';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(title, 10, 20);
+        }
+
+        // 📊 Update live statistics
+        function updateStats() {
+            document.getElementById('throughput-value').textContent = performanceData.throughput.toFixed(2);
+            document.getElementById('latency-value').textContent = performanceData.latency.toFixed(1);
+            document.getElementById('performance-value').textContent = performanceData.performance.toFixed(1);
+            document.getElementById('status-value').textContent = performanceData.status;
+            
+            // Update performance meter
+            const meter = document.getElementById('performance-meter');
+            const text = document.getElementById('performance-text');
+            meter.style.width = Math.min(100, performanceData.performance) + '%';
+            text.textContent = `${performanceData.performance.toFixed(1)}% of 6.48M samples/sec target`;
+        }
+
+        // 🎮 Generate test signals
+        function generateSignal(type, length = 1000, frequency = 10) {
+            const signal = [];
+            for (let i = 0; i < length; i++) {
+                const t = i / length;
+                switch (type) {
+                    case 'sine':
+                        signal.push(Math.sin(2 * Math.PI * frequency * t));
+                        break;
+                    case 'square':
+                        signal.push(Math.sin(2 * Math.PI * frequency * t) > 0 ? 1 : -1);
+                        break;
+                    case 'sawtooth':
+                        signal.push(2 * (t * frequency - Math.floor(t * frequency + 0.5)));
+                        break;
+                    case 'noise':
+                        signal.push((Math.random() - 0.5) * 2);
+                        break;
+                    case 'chirp':
+                        const f = frequency * (1 + t);
+                        signal.push(Math.sin(2 * Math.PI * f * t));
+                        break;
+                    default:
+                        signal.push(Math.sin(2 * Math.PI * frequency * t));
+                }
+            }
+            return signal;
+        }
+
+        // 🏁 Run performance benchmark
+        async function runBenchmark() {
+            const button = document.getElementById('benchmark-btn-text');
+            const results = document.getElementById('benchmark-results');
+            const duration = parseInt(document.getElementById('benchmark-duration').value);
+            
+            if (isProcessing) return;
+            
+            isProcessing = true;
+            button.innerHTML = '<span class="loading"></span> Running Benchmark...';
+            results.style.display = 'none';
+            
+            try {
+                const response = await fetch('/benchmark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duration: duration, batch_size: 8192 })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const benchmarkResults = data.benchmark_results;
+                
+                // Update performance data
+                performanceData.throughput = benchmarkResults.average_throughput / 1e6;
+                performanceData.performance = benchmarkResults.performance_achieved;
+                performanceData.status = benchmarkResults.status;
+                updateStats();
+                
+                // Display results
+                results.innerHTML = `
+                    <h4>📊 Benchmark Results</h4>
+                    <div class="grid-auto-200">
+                        <div><strong>Performance:</strong> ${benchmarkResults.performance_achieved.toFixed(1)}%</div>
+                        <div><strong>Throughput:</strong> ${(benchmarkResults.average_throughput/1e6).toFixed(2)}M samples/sec</div>
+                        <div><strong>Status:</strong> ${benchmarkResults.status}</div>
+                        <div><strong>Total Samples:</strong> ${benchmarkResults.total_samples.toLocaleString()}</div>
+                        <div><strong>Processing Time:</strong> ${benchmarkResults.total_time_seconds.toFixed(2)}s</div>
+                        <div><strong>Batch Count:</strong> ${benchmarkResults.batch_count}</div>
+                    </div>
+                `;
+                results.className = 'results success';
+                results.style.display = 'block';
+                
+            } catch (error) {
+                results.innerHTML = `<h4>❌ Benchmark Failed</h4><p>${error.message}</p>`;
+                results.className = 'results error';
+                results.style.display = 'block';
+                
+                performanceData.status = 'ERROR';
+                updateStats();
+            } finally {
+                isProcessing = false;
+                button.textContent = 'Run 10-Second Benchmark';
+            }
+        }
+
+        // 🧠 Process test signal
+        async function processTestSignal() {
+            const results = document.getElementById('processing-results');
+            const canvas = document.getElementById('signalChart');
+            
+            if (isProcessing) return;
+            
+            isProcessing = true;
+            results.innerHTML = '<span class="loading"></span> Processing signal...';
+            results.style.display = 'block';
+            
+            try {
+                // Generate test signal
+                const signalType = document.getElementById('signal-type').value;
+                const samples = generateSignal(signalType, 2000, 5);
+                
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        samples: samples,
+                        sampling_rate: 100000
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const metrics = data.performance_metrics;
+                
+                // Update performance data
+                performanceData.throughput = metrics.samples_per_second / 1e6;
+                performanceData.latency = metrics.processing_time_ms;
+                performanceData.performance = (metrics.performance_ratio * 100);
+                performanceData.status = 'PROCESSING';
+                updateStats();
+                
+                // Display results
+                results.innerHTML = `
+                    <h4>🔬 Processing Results</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;">
+                        <div><strong>Samples Processed:</strong> ${metrics.samples_processed}</div>
+                        <div><strong>Processing Time:</strong> ${metrics.processing_time_ms.toFixed(3)}ms</div>
+                        <div><strong>Throughput:</strong> ${(metrics.samples_per_second/1e6).toFixed(2)}M samples/sec</div>
+                        <div><strong>Performance Ratio:</strong> ${(metrics.performance_ratio * 100).toFixed(1)}%</div>
+                        <div><strong>Signal Type:</strong> ${signalType}</div>
+                        <div><strong>API Processing Time:</strong> ${metrics.api_processing_time_ms.toFixed(3)}ms</div>
+                    </div>
+                `;
+                results.className = 'results success';
+                
+                // Draw processed signal
+                drawSignal(canvas, data.processed_signal.slice(0, 500), `Processed ${signalType} Signal`);
+                
+            } catch (error) {
+                results.innerHTML = `<h4>❌ Processing Failed</h4><p>${error.message}</p>`;
+                results.className = 'results error';
+                
+                performanceData.status = 'ERROR';
+                updateStats();
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // 🎨 Generate custom signal
+        function generateCustomSignal() {
+            const canvas = document.getElementById('signalChart');
+            const signalType = document.getElementById('signal-type').value;
+            const signal = generateSignal(signalType, 1000, 8);
+            drawSignal(canvas, signal, `Generated ${signalType} Signal`);
+        }
+
+        // 🌊 WebSocket management
+        function toggleWebSocket() {
+            const button = document.getElementById('ws-button');
+            const status = document.getElementById('ws-status');
+            const metrics = document.getElementById('stream-metrics');
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+                return;
+            }
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/stream`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            button.textContent = 'Connecting...';
+            status.className = 'websocket-status ws-connecting';
+            status.textContent = 'Connecting...';
+            
+            ws.onopen = () => {
+                button.textContent = 'Disconnect WebSocket';
+                status.className = 'websocket-status ws-connected';
+                status.textContent = 'Connected';
+                
+                // Send periodic test signals
+                const sendTestSignal = () => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        const testSignal = generateSignal('sine', 500, 10);
+                        ws.send(JSON.stringify({
+                            type: 'process',
+                            data: {
+                                samples: testSignal,
+                                sampling_rate: 48000
+                            },
+                            timestamp: Date.now() / 1000
+                        }));
+                        setTimeout(sendTestSignal, 2000);
+                    }
+                };
+                sendTestSignal();
+            };
+            
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                
+                if (message.type === 'processed_signal') {
+                    const streamMetrics = message.data.performance_metrics;
+                    metrics.innerHTML = `
+                        <h4>🌊 Stream Metrics</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div><strong>Throughput:</strong> ${(streamMetrics.samples_per_second/1e6).toFixed(2)}M samples/sec</div>
+                            <div><strong>Latency:</strong> ${streamMetrics.processing_time_ms.toFixed(3)}ms</div>
+                            <div><strong>Performance:</strong> ${(streamMetrics.performance_ratio * 100).toFixed(1)}%</div>
+                            <div><strong>Samples:</strong> ${streamMetrics.samples_processed}</div>
+                        </div>
+                    `;
+                    metrics.className = 'results success';
+                    metrics.style.display = 'block';
+                    
+                    // Update live stats
+                    performanceData.throughput = streamMetrics.samples_per_second / 1e6;
+                    performanceData.latency = streamMetrics.processing_time_ms;
+                    performanceData.performance = (streamMetrics.performance_ratio * 100);
+                    performanceData.status = 'STREAMING';
+                    updateStats();
+                }
+            };
+            
+            ws.onclose = () => {
+                button.textContent = 'Connect WebSocket';
+                status.className = 'websocket-status ws-disconnected';
+                status.textContent = 'Disconnected';
+                ws = null;
+                
+                performanceData.status = 'READY';
+                updateStats();
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                status.className = 'websocket-status ws-disconnected';
+                status.textContent = 'Connection Error';
+                
+                performanceData.status = 'ERROR';
+                updateStats();
+            };
+        }
+
+        // 🔌 Plugin management
+        async function loadPlugins() {
+            const select = document.getElementById('plugin-select');
+            const results = document.getElementById('plugin-results');
+            
+            try {
+                const response = await fetch('/plugins');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const plugins = await response.json();
+                
+                select.innerHTML = '<option value="">Select Plugin...</option>';
+                Object.keys(plugins).forEach(pluginName => {
+                    const option = document.createElement('option');
+                    option.value = pluginName;
+                    option.textContent = `${pluginName} - ${plugins[pluginName].metadata.description}`;
+                    select.appendChild(option);
+                });
+                
+                results.innerHTML = `<h4>🔌 Available Plugins</h4><p>Loaded ${Object.keys(plugins).length} plugins successfully.</p>`;
+                results.className = 'results success';
+                results.style.display = 'block';
+                
+            } catch (error) {
+                results.innerHTML = `<h4>❌ Plugin Loading Failed</h4><p>${error.message}</p>`;
+                results.className = 'results error';
+                results.style.display = 'block';
+            }
+        }
+
+        async function executePlugin() {
+            const select = document.getElementById('plugin-select');
+            const results = document.getElementById('plugin-results');
+            const pluginName = select.value;
+            
+            if (!pluginName) {
+                alert('Please select a plugin first');
+                return;
+            }
+            
+            try {
+                const testData = {
+                    signal: generateSignal('sine', 100, 5),
+                    operation: 'fft'
+                };
+                
+                const response = await fetch(`/plugins/${pluginName}/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <h4>🔌 Plugin Execution Result</h4>
+                    <div><strong>Plugin:</strong> ${data.plugin_name}</div>
+                    <div><strong>Status:</strong> ${data.status}</div>
+                    <div><strong>Execution Time:</strong> ${(data.execution_time_seconds * 1000).toFixed(3)}ms</div>
+                    <div><strong>Result:</strong> <pre>${JSON.stringify(data.result, null, 2)}</pre></div>
+                `;
+                results.className = 'results success';
+                results.style.display = 'block';
+                
+            } catch (error) {
+                results.innerHTML = `<h4>❌ Plugin Execution Failed</h4><p>${error.message}</p>`;
+                results.className = 'results error';
+                results.style.display = 'block';
+            }
+        }
+
+        // 📊 System monitoring
+        async function getSystemMetrics() {
+            const results = document.getElementById('system-metrics');
+            
+            try {
+                const response = await fetch('/metrics');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const metrics = await response.json();
+                
+                results.innerHTML = `
+                    <h4>📊 System Metrics</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 15px 0;">
+                        <div><strong>Uptime:</strong> ${(metrics.uptime_seconds / 3600).toFixed(1)} hours</div>
+                        <div><strong>Total Requests:</strong> ${metrics.active_metrics.total_requests}</div>
+                        <div><strong>Success Rate:</strong> ${((1 - metrics.active_metrics.error_rate / 100) * 100).toFixed(1)}%</div>
+                        <div><strong>Avg Response Time:</strong> ${metrics.active_metrics.average_response_time.toFixed(3)}ms</div>
+                        <div><strong>Samples Processed:</strong> ${metrics.active_metrics.total_samples_processed.toLocaleString()}</div>
+                        <div><strong>System Status:</strong> ${metrics.system_status}</div>
+                    </div>
+                `;
+                results.className = 'results success';
+                results.style.display = 'block';
+                
+            } catch (error) {
+                results.innerHTML = `<h4>❌ Metrics Loading Failed</h4><p>${error.message}</p>`;
+                results.className = 'results error';
+                results.style.display = 'block';
+            }
+        }
+
+        async function exportMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const metrics = await response.json();
+                const dataStr = JSON.stringify(metrics, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `holomorphic-metrics-${Date.now()}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                alert(`Export failed: ${error.message}`);
+            }
+        }
+
+        // 🚀 Initialize demo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize chart
+            const canvas = document.getElementById('signalChart');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Draw welcome message
+            drawSignal(canvas, [], 'Ready for Signal Processing');
+            
+            // Update stats periodically
+            setInterval(updateStats, 1000);
+            
+            // Load plugins on startup
+            setTimeout(loadPlugins, 1000);
+            
+            console.log('🧠 Holomorphic Signal Processing Demo Initialized');
+            console.log('🚀 Ready for 6.48M samples/second processing!');
+        });
+    </script>
+</body>
+</html>

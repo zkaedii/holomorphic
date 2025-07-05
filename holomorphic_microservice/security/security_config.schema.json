@@ -1,0 +1,295 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://holomorphic.ai/schemas/security-config.json",
+  "title": "🛡️ Holomorphic Security Configuration Schema",
+  "description": "Military-grade security configuration for Holomorphic Signal Processing API",
+  "type": "object",
+  "properties": {
+    "jwt_config": {
+      "type": "object",
+      "description": "JWT token configuration",
+      "properties": {
+        "secret_key": {
+          "type": "string",
+          "minLength": 32,
+          "description": "JWT secret key (minimum 32 characters)"
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["HS256", "HS384", "HS512", "RS256"],
+          "default": "HS256",
+          "description": "JWT signing algorithm"
+        },
+        "access_token_expire_minutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "default": 30,
+          "description": "Access token expiration in minutes"
+        },
+        "refresh_token_expire_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 7,
+          "description": "Refresh token expiration in days"
+        }
+      },
+      "required": ["secret_key", "algorithm"],
+      "additionalProperties": false
+    },
+    "password_policy": {
+      "type": "object",
+      "description": "Password strength requirements",
+      "properties": {
+        "min_length": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 128,
+          "default": 12,
+          "description": "Minimum password length"
+        },
+        "require_uppercase": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require uppercase letters"
+        },
+        "require_lowercase": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require lowercase letters"
+        },
+        "require_digits": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require numeric digits"
+        },
+        "require_special": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require special characters"
+        },
+        "max_login_attempts": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 10,
+          "default": 5,
+          "description": "Maximum failed login attempts before lockout"
+        },
+        "lockout_duration_minutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "default": 15,
+          "description": "Account lockout duration in minutes"
+        }
+      },
+      "additionalProperties": false
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration",
+      "properties": {
+        "encryption_key": {
+          "type": "string",
+          "description": "Fernet encryption key (base64 encoded)"
+        },
+        "salt_rounds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 16,
+          "default": 12,
+          "description": "Bcrypt salt rounds"
+        }
+      },
+      "required": ["encryption_key"],
+      "additionalProperties": false
+    },
+    "rate_limiting": {
+      "type": "object",
+      "description": "API rate limiting configuration",
+      "properties": {
+        "default_rate_limit": {
+          "type": "string",
+          "pattern": "^\\d+/(second|minute|hour|day)$",
+          "default": "100/minute",
+          "description": "Default rate limit (format: number/time_unit)"
+        },
+        "admin_rate_limit": {
+          "type": "string",
+          "pattern": "^\\d+/(second|minute|hour|day)$",
+          "default": "1000/minute",
+          "description": "Admin user rate limit"
+        },
+        "premium_rate_limit": {
+          "type": "string",
+          "pattern": "^\\d+/(second|minute|hour|day)$",
+          "default": "500/minute",
+          "description": "Premium user rate limit"
+        }
+      },
+      "additionalProperties": false
+    },
+    "security_monitoring": {
+      "type": "object",
+      "description": "Security monitoring and audit configuration",
+      "properties": {
+        "enable_audit_logging": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable security audit logging"
+        },
+        "enable_intrusion_detection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable intrusion detection system"
+        },
+        "enable_auto_patching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic security patching"
+        },
+        "vulnerability_scan_interval": {
+          "type": "integer",
+          "minimum": 300,
+          "maximum": 86400,
+          "default": 3600,
+          "description": "Vulnerability scan interval in seconds"
+        },
+        "audit_retention_days": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 365,
+          "default": 90,
+          "description": "Audit log retention period in days"
+        }
+      },
+      "additionalProperties": false
+    },
+    "session_management": {
+      "type": "object",
+      "description": "Session management configuration",
+      "properties": {
+        "redis_url": {
+          "type": "string",
+          "format": "uri",
+          "default": "redis://localhost:6379/0",
+          "description": "Redis connection URL for session storage"
+        },
+        "session_timeout_minutes": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 480,
+          "default": 60,
+          "description": "Session timeout in minutes"
+        },
+        "max_concurrent_sessions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3,
+          "description": "Maximum concurrent sessions per user"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ip_security": {
+      "type": "object",
+      "description": "IP-based security configuration",
+      "properties": {
+        "enable_ip_whitelisting": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable IP address whitelisting"
+        },
+        "whitelist_ips": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "ipv4"
+          },
+          "description": "List of whitelisted IP addresses"
+        },
+        "enable_ip_blacklisting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic IP blacklisting"
+        },
+        "blacklist_threshold": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 50,
+          "default": 10,
+          "description": "Failed attempts threshold for IP blacklisting"
+        },
+        "blacklist_duration_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24,
+          "description": "IP blacklist duration in hours"
+        }
+      },
+      "additionalProperties": false
+    },
+    "two_factor_auth": {
+      "type": "object",
+      "description": "Two-factor authentication configuration",
+      "properties": {
+        "enable_2fa": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable two-factor authentication"
+        },
+        "require_2fa_for_admin": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require 2FA for admin accounts"
+        },
+        "totp_issuer": {
+          "type": "string",
+          "default": "Holomorphic Signal Processing",
+          "description": "TOTP issuer name"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["jwt_config", "password_policy", "encryption"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "jwt_config": {
+        "secret_key": "your-super-secret-jwt-key-here",
+        "algorithm": "HS256",
+        "access_token_expire_minutes": 30,
+        "refresh_token_expire_days": 7
+      },
+      "password_policy": {
+        "min_length": 12,
+        "require_uppercase": true,
+        "require_lowercase": true,
+        "require_digits": true,
+        "require_special": true,
+        "max_login_attempts": 5,
+        "lockout_duration_minutes": 15
+      },
+      "encryption": {
+        "encryption_key": "your-fernet-encryption-key-here",
+        "salt_rounds": 12
+      },
+      "rate_limiting": {
+        "default_rate_limit": "100/minute",
+        "admin_rate_limit": "1000/minute",
+        "premium_rate_limit": "500/minute"
+      },
+      "security_monitoring": {
+        "enable_audit_logging": true,
+        "enable_intrusion_detection": true,
+        "enable_auto_patching": true,
+        "vulnerability_scan_interval": 3600,
+        "audit_retention_days": 90
+      }
+    }
+  ]
+}
