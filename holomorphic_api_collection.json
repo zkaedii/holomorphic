@@ -1,0 +1,595 @@
+{
+  "info": {
+    "name": "Holomorphic Signal Processing API",
+    "description": "Complete API collection for Holomorphic Signal Processing endpoints",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test_user\",\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "register"]
+            },
+            "description": "Register a new user account\n\nRequirements:\n- Username: 3-32 characters, alphanumeric + underscore\n- Email: Valid email format\n- Password: Minimum 8 characters"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test_user\",\n  \"password\": \"TestPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            },
+            "description": "Login user and receive authentication token\n\nResponse includes:\n- token: JWT authentication token (save this!)\n- expires_at: Token expiration timestamp\n- username: Logged in username\n\nSave the token to the 'token' variable for use in other requests."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"token\", jsonData.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me"]
+            },
+            "description": "Get current authenticated user information"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logout"]
+            },
+            "description": "Logout current user and invalidate token"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for user registration, login, and session management"
+    },
+    {
+      "name": "Signal Processing",
+      "item": [
+        {
+          "name": "Process Signal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"samples\": [0.0, 0.309, 0.588, 0.809, 0.951, 1.0, 0.951, 0.809, 0.588, 0.309, 0.0, -0.309, -0.588, -0.809, -0.951, -1.0, -0.951, -0.809, -0.588, -0.309],\n  \"harmonics\": 5,\n  \"noise\": 0.1,\n  \"feedback\": 0.3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "process"]
+            },
+            "description": "Process signal with holomorphic transformation\n\nParameters:\n- samples: Array of 10-10000 floating point values\n- harmonics: Number of harmonic components (1-20, default: 5)\n- noise: Noise level (0-1, default: 0.1)\n- feedback: Feedback strength (0-1, default: 0.3)\n\nReturns:\n- output: Processed signal array\n- processing_time_ms: Processing time in milliseconds\n- samples_per_second: Processing throughput\n- metrics: Statistical metrics (mean, std, min, max)"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Sine Wave",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/generate/sine?length=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate", "sine"],
+              "query": [
+                {
+                  "key": "length",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Generate sine wave test signal"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Square Wave",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/generate/square?length=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate", "square"],
+              "query": [
+                {
+                  "key": "length",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Generate square wave test signal"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Sawtooth Wave",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/generate/sawtooth?length=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate", "sawtooth"],
+              "query": [
+                {
+                  "key": "length",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Generate sawtooth wave test signal"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Noise",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/generate/noise?length=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate", "noise"],
+              "query": [
+                {
+                  "key": "length",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Generate random noise test signal"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Chirp",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/generate/chirp?length=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "generate", "chirp"],
+              "query": [
+                {
+                  "key": "length",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Generate chirp (frequency sweep) test signal"
+          },
+          "response": []
+        }
+      ],
+      "description": "Signal generation and processing endpoints"
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stats"]
+            },
+            "description": "Get user statistics\n\nReturns:\n- total_processes: Total number of processing operations\n- total_samples: Total samples processed\n- avg_processing_time: Average processing time in ms\n- min_processing_time: Minimum processing time in ms\n- max_processing_time: Maximum processing time in ms"
+          },
+          "response": []
+        },
+        {
+          "name": "Get History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/history?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Maximum number of history items to return"
+                }
+              ]
+            },
+            "description": "Get processing history for current user\n\nQuery Parameters:\n- limit: Maximum number of items (default: 50)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Analytics and history endpoints"
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check API health status (requires authentication after security patch)\n\nReturns:\n- status: Overall health status\n- timestamp: Current timestamp\n- performance: Performance metrics (admin only)\n- components: Component health status"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Metrics (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            },
+            "description": "Get system metrics (admin users only)\n\nReturns detailed system metrics including:\n- Active metrics\n- Recent events\n- Performance snapshots\n- System status"
+          },
+          "response": []
+        },
+        {
+          "name": "API Documentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs"]
+            },
+            "description": "Access interactive API documentation (Swagger UI)"
+          },
+          "response": []
+        }
+      ],
+      "description": "System health and monitoring endpoints"
+    },
+    {
+      "name": "Workflows",
+      "item": [
+        {
+          "name": "Complete Workflow",
+          "item": [
+            {
+              "name": "1. Register",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"workflow_user\",\n  \"email\": \"workflow@example.com\",\n  \"password\": \"WorkflowPass123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "register"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2. Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"workflow_user\",\n  \"password\": \"WorkflowPass123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "login"]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "pm.environment.set(\"token\", jsonData.token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Generate Signal",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/generate/sine?length=1000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "generate", "sine"],
+                  "query": [
+                    {
+                      "key": "length",
+                      "value": "1000"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4. Process Signal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"samples\": [0.0, 0.309, 0.588, 0.809, 0.951, 1.0],\n  \"harmonics\": 10,\n  \"noise\": 0.15,\n  \"feedback\": 0.4\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/process",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "process"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5. Check Statistics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stats",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "stats"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6. View History",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/history?limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "history"],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7. Logout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/logout",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "logout"]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete end-to-end workflow example"
+        }
+      ],
+      "description": "Pre-configured workflow examples"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ]
+}
