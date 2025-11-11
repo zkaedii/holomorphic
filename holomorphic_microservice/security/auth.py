@@ -71,7 +71,8 @@ class Permission(Enum):
 @dataclass
 class SecurityConfig:
     """🔧 Security configuration with auto-validation"""
-    jwt_secret_key: str = field(default_factory=lambda: secrets.token_urlsafe(64))
+    # SECURITY FIX: Load JWT secret from environment, require it to be set
+    jwt_secret_key: str = field(default_factory=lambda: os.getenv("JWT_SECRET_KEY", ""))
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
@@ -109,7 +110,11 @@ class SecurityConfig:
     
     def _validate_config(self):
         """🔍 Auto-audit configuration"""
-        assert len(self.jwt_secret_key) >= 32, "JWT secret key too short"
+        # SECURITY FIX: Enforce strong JWT secret key requirement
+        if not self.jwt_secret_key:
+            raise ValueError("JWT_SECRET_KEY environment variable must be set for security")
+        if len(self.jwt_secret_key) < 32:
+            raise ValueError("JWT secret key must be at least 32 characters long")
         assert self.jwt_access_token_expire_minutes > 0, "Invalid token expiry"
         assert self.min_password_length >= 8, "Password length too short"
         assert self.max_login_attempts > 0, "Invalid login attempts limit"
@@ -206,7 +211,19 @@ class SecurityManager:
     
     def _initialize_admin_user(self):
         """👑 Create default admin user"""
-        admin_password = os.getenv("ADMIN_PASSWORD", "HolomorphicAdmin@2024!")
+        # SECURITY FIX: Require admin password from environment, no default
+        admin_password = os.getenv("ADMIN_PASSWORD")
+        if not admin_password:
+            logger.warning("⚠️ ADMIN_PASSWORD not set in environment. Admin user not created for security.")
+            logger.warning("⚠️ Set ADMIN_PASSWORD environment variable to create admin user.")
+            return
+
+        # SECURITY FIX: Validate password meets security requirements before creating admin
+        if not self._validate_password_strength(admin_password):
+            logger.error("❌ ADMIN_PASSWORD does not meet security requirements. Admin user not created.")
+            logger.error("❌ Password must be at least 12 characters with uppercase, lowercase, digits, and special characters.")
+            return
+
         admin_user = self.create_user(
             username="admin",
             email="admin@holomorphic.ai",
@@ -214,7 +231,7 @@ class SecurityManager:
             security_level=SecurityLevel.ADMIN,
             permissions={Permission.ADMIN, Permission.SYSTEM_CONFIG, Permission.PLUGIN_MANAGE}
         )
-        logger.info("👑 Admin user initialized")
+        logger.info("👑 Admin user initialized securely")
     
     def _start_security_monitoring(self):
         """🔍 Start background security monitoring"""
@@ -503,19 +520,25 @@ class SecurityManager:
     def verify_token(self, token: str) -> Dict[str, Any]:
         """🔍 Verify and decode JWT token"""
         try:
-            payload = jwt.decode(token, self.config.jwt_secret_key, algorithms=[self.config.jwt_algorithm])
-            
+            # SECURITY FIX: Explicitly set algorithms to prevent algorithm confusion attacks
+            payload = jwt.decode(
+                token,
+                self.config.jwt_secret_key,
+                algorithms=[self.config.jwt_algorithm],
+                options={"verify_signature": True, "verify_exp": True}
+            )
+
             # Check token type
             if payload.get("type") != "access":
                 raise jwt.InvalidTokenError("Invalid token type")
-            
+
             # Check if user exists and is active
             user_id = payload.get("user_id")
             if user_id not in self.users or not self.users[user_id].is_active:
                 raise jwt.InvalidTokenError("User not found or inactive")
-            
+
             return payload
-            
+
         except jwt.ExpiredSignatureError:
             raise jwt.InvalidTokenError("Token has expired")
         except jwt.InvalidTokenError as e:

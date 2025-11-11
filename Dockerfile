@@ -68,12 +68,15 @@ RUN mkdir -p /app/logs /app/data /app/plugins /app/config && \
 # Switch to non-root user
 USER holomorphic
 
-# Health check
+# SECURITY FIX: Health check endpoint now requires authentication, using basic check instead
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/docs || exit 1
 
 # Expose port
 EXPOSE 8000
+
+# SECURITY FIX: Set secure umask
+RUN echo "umask 077" >> /home/holomorphic/.bashrc
 
 # Set environment variables
 ENV PYTHONPATH=/app \

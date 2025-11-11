@@ -7,12 +7,13 @@ import asyncio
 import json
 import logging
 import time
+import os
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional, Union
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Security
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Security, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -86,12 +87,14 @@ app = FastAPI(
 )
 
 # Middleware
+# SECURITY FIX: Restrict CORS to specific origins only (configure via environment)
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,  # FIXED: No longer allows all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # FIXED: Explicit methods only
+    allow_headers=["Content-Type", "Authorization"],  # FIXED: Explicit headers only
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(SlowAPIMiddleware)
@@ -148,17 +151,22 @@ class WebSocketMessage(BaseModel):
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
     """Verify JWT token and get current user"""
     try:
-        payload = verify_token(credentials.credentials)
+        # SECURITY FIX: Use global security_manager instance instead of creating new one
+        if not security_manager:
+            raise HTTPException(status_code=503, detail="Security manager not available")
+
+        payload = security_manager.verify_token(credentials.credentials)
         return payload
     except Exception as e:
+        logger.warning(f"Authentication failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
 
 # Health check endpoints
 @app.get("/health", response_model=HealthResponse)
 @limiter.limit("60/minute")
-async def health_check(request):
-    """🏥 Health check endpoint"""
+async def health_check(request: Request, current_user=Depends(get_current_user)):
+    """🏥 Health check endpoint - SECURITY: Now requires authentication"""
     try:
         components_status = {
             "engine": "healthy" if engine and engine.performance_metrics else "degraded",
@@ -166,9 +174,12 @@ async def health_check(request):
             "metrics_collector": "healthy" if metrics_collector else "unhealthy",
             "security_manager": "healthy" if security_manager else "unhealthy"
         }
-        
-        performance = engine.get_performance_metrics() if engine else {}
-        
+
+        # SECURITY FIX: Limit detailed performance info to admins only
+        performance = {}
+        if current_user.get("security_level") == "admin":
+            performance = engine.get_performance_metrics() if engine else {}
+
         return HealthResponse(
             status="healthy" if all(status == "healthy" for status in components_status.values()) else "degraded",
             timestamp=time.time(),
@@ -182,13 +193,19 @@ async def health_check(request):
 
 @app.get("/metrics")
 @limiter.limit("30/minute")
-async def get_metrics(request):
-    """📊 Get system metrics"""
+async def get_metrics(request: Request, current_user=Depends(get_current_user)):
+    """📊 Get system metrics - SECURITY: Now requires authentication"""
     try:
+        # SECURITY FIX: Only admins can view system metrics
+        if current_user.get("security_level") not in ["admin", "system"]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions to view metrics")
+
         if not metrics_collector:
             raise HTTPException(status_code=503, detail="Metrics collector not available")
-        
+
         return metrics_collector.get_all_metrics()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Metrics retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve metrics")
@@ -197,29 +214,29 @@ async def get_metrics(request):
 # Core processing endpoints
 @app.post("/process", response_model=ProcessingResponse)
 @limiter.limit("100/minute")
-async def process_signal(request, processing_request: ProcessingRequest, current_user=Depends(get_current_user)):
+async def process_signal(request: Request, processing_request: ProcessingRequest, current_user=Depends(get_current_user)):
     """🧠 Process signal using holomorphic engine"""
     try:
         if not engine:
             raise HTTPException(status_code=503, detail="Processing engine not available")
-        
+
         # Convert input samples to numpy array
         samples = np.array(processing_request.samples)
         control_input = np.array(processing_request.control_input) if processing_request.control_input else None
-        
+
         # Generate time array
         dt = 1.0 / processing_request.sampling_rate
         t_array = np.arange(len(samples)) * dt
-        
+
         # Process signal
         start_time = time.perf_counter()
         processed_signal = engine.process_holomorphic_signal(t_array, control_input)
         processing_time = time.perf_counter() - start_time
-        
+
         # Get performance metrics
         performance_metrics = engine.get_performance_metrics()
         performance_metrics["api_processing_time_ms"] = processing_time * 1000
-        
+
         # Update metrics collector
         if metrics_collector:
             metrics_collector.record_processing_event(
@@ -227,46 +244,52 @@ async def process_signal(request, processing_request: ProcessingRequest, current
                 processing_time=processing_time,
                 user_id=current_user.get("user_id", "unknown")
             )
-        
+
         return ProcessingResponse(
             processed_signal=processed_signal.tolist(),
             performance_metrics=performance_metrics,
             timestamp=time.time(),
             status="success"
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
+        # SECURITY FIX: Don't expose internal error details to clients
         logger.error(f"Signal processing failed: {e}")
         if metrics_collector:
-            metrics_collector.record_error("processing_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+            metrics_collector.record_error("processing_error", "Internal processing error")
+        raise HTTPException(status_code=500, detail="Processing failed")
 
 
 @app.post("/benchmark")
 @limiter.limit("5/minute")
-async def run_benchmark(request, benchmark_request: BenchmarkRequest, current_user=Depends(get_current_user)):
+async def run_benchmark(request: Request, benchmark_request: BenchmarkRequest, current_user=Depends(get_current_user)):
     """🏁 Run performance benchmark"""
     try:
         logger.info(f"🏁 Starting benchmark for user {current_user.get('user_id', 'unknown')}")
-        
+
         # Run benchmark in background task
         results = benchmark_holomorphic_engine(duration=benchmark_request.duration)
-        
+
         # Update metrics
         if metrics_collector:
             metrics_collector.record_benchmark_result(results)
-        
+
         return {
             "benchmark_results": results,
             "timestamp": time.time(),
             "status": "completed"
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
+        # SECURITY FIX: Don't expose internal error details
         logger.error(f"Benchmark failed: {e}")
         if metrics_collector:
-            metrics_collector.record_error("benchmark_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Benchmark failed: {str(e)}")
+            metrics_collector.record_error("benchmark_error", "Benchmark error")
+        raise HTTPException(status_code=500, detail="Benchmark failed")
 
 
 # Plugin management endpoints
@@ -286,40 +309,60 @@ async def list_plugins(request, current_user=Depends(get_current_user)):
 
 @app.post("/plugins/{plugin_name}/execute")
 @limiter.limit("50/minute")
-async def execute_plugin(request, plugin_name: str, data: Dict, current_user=Depends(get_current_user)):
+async def execute_plugin(request: Request, plugin_name: str, data: Dict, current_user=Depends(get_current_user)):
     """🔌 Execute a specific plugin"""
     try:
         if not plugin_manager:
             raise HTTPException(status_code=503, detail="Plugin manager not available")
-        
+
         result = plugin_manager.execute_plugin(plugin_name, data)
-        
+
         if metrics_collector:
             metrics_collector.record_plugin_execution(plugin_name, current_user.get("user_id", "unknown"))
-        
+
         return {
             "plugin_name": plugin_name,
             "result": result,
             "timestamp": time.time(),
             "status": "success"
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
+        # SECURITY FIX: Don't expose internal error details
         logger.error(f"Plugin execution failed: {e}")
         if metrics_collector:
-            metrics_collector.record_error("plugin_error", f"{plugin_name}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Plugin execution failed: {str(e)}")
+            metrics_collector.record_error("plugin_error", f"{plugin_name}: Plugin execution error")
+        raise HTTPException(status_code=500, detail="Plugin execution failed")
 
 
 # WebSocket endpoint for real-time streaming
 @app.websocket("/stream")
 async def websocket_stream(websocket: WebSocket):
-    """🌊 Real-time signal processing stream"""
-    await websocket.accept()
-    
+    """🌊 Real-time signal processing stream - SECURITY: Authentication required via query param"""
+    # SECURITY FIX: Require authentication for WebSocket connections
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008, reason="Authentication required")
+        return
+
     try:
-        logger.info("🌊 WebSocket connection established")
-        
+        # Verify token
+        if not security_manager:
+            await websocket.close(code=1011, reason="Security manager unavailable")
+            return
+
+        user_payload = security_manager.verify_token(token)
+        logger.info(f"🌊 WebSocket connection established for user {user_payload.get('user_id')}")
+    except Exception as e:
+        logger.warning(f"WebSocket authentication failed: {e}")
+        await websocket.close(code=1008, reason="Invalid authentication token")
+        return
+
+    await websocket.accept()
+
+    try:
         while True:
             # Receive message
             message_data = await websocket.receive_text()
