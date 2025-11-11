@@ -16,9 +16,12 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - LOG_LEVEL=INFO
       - WORKERS=4
-      - ADMIN_PASSWORD=HolomorphicAdmin@2024!
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-here}
+      # SECURITY FIX: No default passwords - must be set in environment
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD environment variable must be set}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY environment variable must be set}
       - PROMETHEUS_ENABLED=true
+      # SECURITY FIX: Configure allowed CORS origins
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
@@ -89,8 +92,15 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=holomorphic
+      # SECURITY FIX: No default Grafana password
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD environment variable must be set}
       - GF_USERS_ALLOW_SIGN_UP=false
+      # SECURITY FIX: Additional Grafana security settings
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_AUTH_DISABLE_SIGNOUT_MENU=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
     volumes:
       - grafana-data:/var/lib/grafana
       - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
